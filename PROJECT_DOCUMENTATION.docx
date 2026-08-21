@@ -1,0 +1,244 @@
+# Countries & Employees API — Project Documentation
+
+This document describes the "Countries & Employees API" project, its structure, how to run and test it locally, the available endpoints and data models, and suggestions for extension and production hardening. It is derived from the repository files included with the project.
+
+## Project summary
+
+A small FastAPI application that provides:
+- A read-only list of countries (8 pre-defined countries).
+- CRUD-style operations (in-memory) for employees.
+
+The project is intended as a compact example demonstrating FastAPI, Pydantic models, and simple tests.
+
+## Main features
+
+- GET / : health endpoint
+- GET /countries : returns the list of countries
+- GET /employees : returns all employees
+- POST /employees : create a new employee (in-memory)
+- GET /employees/{employee_id} : read a single employee
+- PUT /employees/{employee_id} : update an employee
+- DELETE /employees/{employee_id} : delete an employee
+
+## Project structure
+
+Root files and directories:
+
+- app/ — application package
+  - main.py — FastAPI app, Pydantic models, data and routes
+- tests/ — pytest tests
+  - test_countries.py — tests for countries endpoint and OpenAPI
+- requirements.txt — runtime/test dependencies
+- pyproject.toml — pytest config
+- README.md — original project readme
+
+## Key files (snippet references)
+
+Application implementation (models, data and routes):
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List
+
+
+class Country(BaseModel):
+    name: str
+    code: str
+    capital: str
+    region: str
+
+
+COUNTRIES = [
+    Country(name="Australia", code="AU", capital="Canberra", region="Oceania"),
+    Country(name="Brazil", code="BR", capital="Brasilia", region="South America"),
+    Country(name="Canada", code="CA", capital="Ottawa", region="North America"),
+    Country(name="France", code="FR", capital="Paris", region="Europe"),
+    Country(name="India", code="IN", capital="New Delhi", region="Asia"),
+    Country(name="Japan", code="JP", capital="Tokyo", region="Asia"),
+    Country(name="Kenya", code="KE", capital="Nairobi", region="Africa"),
+    Country(name="United States", code="US", capital="Washington, D.C.", region="North America"),
+]
+
+
+class Employee(BaseModel):
+    id: int
+    name: str
+    role: str
+    department: str
+    email: str
+    location: str
+
+
+class EmployeeCreate(BaseModel):
+    name: str
+    role: str
+    department: str
+    email: str
+    location: str
+
+
+Tests for the countries endpoint and OpenAPI:
+
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+client = TestClient(app)
+
+
+def test_list_countries_returns_country_data() -> None:
+    response = client.get("/countries")
+
+    assert response.status_code == 200
+    countries = response.json()
+    assert len(countries) == 8
+    assert countries[0] == {
+        "name": "Australia",
+        "code": "AU",
+        "capital": "Canberra",
+        "region": "Oceania",
+    }
+
+
+def test_openapi_documents_countries_endpoint() -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    assert "/countries" in response.json()["paths"]
+
+
+Dependencies:
+
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.34,<1.0
+pytest>=8.0,<9.0
+httpx>=0.28,<1.0
+
+## API reference
+
+Base URL (development): http://127.0.0.1:8000
+
+- GET /  
+  - Description: Health check  
+  - Response: 200, JSON: {"message": "Countries & Employees API is running"}
+
+- GET /countries  
+  - Description: Return list of pre-defined countries  
+  - Response model: list[Country]  
+  - Example response (first item):
+    {
+      "name": "Australia",
+      "code": "AU",
+      "capital": "Canberra",
+      "region": "Oceania"
+    }
+
+- GET /employees  
+  - Description: Return all employee records (in-memory)  
+  - Response model: list[Employee]
+
+- POST /employees  
+  - Description: Create a new employee  
+  - Request body: EmployeeCreate (name, role, department, email, location)  
+  - Response model: Employee  
+  - Status code: 201
+
+- GET /employees/{employee_id}  
+  - Description: Retrieve a single employee by id  
+  - Returns 404 if not found
+
+- PUT /employees/{employee_id}  
+  - Description: Update an existing employee (replaces fields)  
+  - Returns 404 if not found
+
+- DELETE /employees/{employee_id}  
+  - Description: Remove an employee from the in-memory list  
+  - Returns 404 if not found
+
+Swagger UI is available at: /docs  
+OpenAPI JSON: /openapi.json
+
+## Data models
+
+- Country
+  - name: str
+  - code: str (two-letter country code used in examples)
+  - capital: str
+  - region: str
+
+- Employee
+  - id: int
+  - name: str
+  - role: str
+  - department: str
+  - email: str
+  - location: str
+
+- EmployeeCreate
+  - Same as Employee except no `id` (server assigns id)
+
+## Run locally (development)
+
+1. Create and activate a virtual environment:
+   - python -m venv .venv
+   - Activate (platform-specific)
+
+2. Install dependencies:
+   - python -m pip install --upgrade pip
+   - python -m pip install -r requirements.txt
+
+3. Run with Uvicorn:
+   - python -m uvicorn app.main:app --reload
+
+4. Visit:
+   - http://127.0.0.1:8000/ (health)
+   - http://127.0.0.1:8000/countries
+   - http://127.0.0.1:8000/docs
+
+Example curl (GET countries):
+
+curl http://127.0.0.1:8000/countries
+
+Example curl (create employee):
+
+curl -X POST http://127.0.0.1:8000/employees \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Dana Smith","role":"DevOps","department":"Platform","email":"dana.smith@example.com","location":"Remote"}'
+
+## Testing
+
+Run tests with pytest from project root:
+
+python -m pytest
+
+The provided tests confirm:
+- /countries returns 8 entries and the first item is Australia.
+- The OpenAPI document contains the /countries path.
+
+## Limitations & Notes
+
+- Data is stored in-memory. All employee changes are lost on restart.
+- No authentication or authorization implemented.
+- Country list is hard-coded; there is no endpoint to manage countries.
+- Email and other fields have no extra validation beyond type checks.
+- The server uses Uvicorn for development; production deployment requires a production-ready ASGI server and configuration.
+
+## Suggested Improvements
+
+- Persist employees to a database (e.g., SQLite, Postgres).
+- Add validation for emails and role / department enums.
+- Add pagination, filtering, and GET /countries/{code}.
+- Add tests for employee CRUD routes.
+- Add logging, CORS, and rate-limiting.
+- Add OpenAPI security schemes and authentication (e.g., OAuth2, JWT).
+
+## Contributing
+
+- Follow repository conventions.
+- Add tests for any new behavior.
+- Document API changes in README or a changelog.
+
+## Contact / Maintainer
+
+Repository owner: (see repository) — use GitHub issues or PRs to contribute or report problems.
