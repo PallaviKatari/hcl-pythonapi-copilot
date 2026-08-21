@@ -20,14 +20,37 @@ COUNTRIES = [
     Country(name="United States", code="US", capital="Washington, D.C.", region="North America"),
 ]
 
-app = FastAPI(title="Countries API", version="1.0.0")
+
+class Employee(BaseModel):
+    id: int
+    name: str
+    role: str
+    department: str
+    email: str
+    location: str
+
+
+EMPLOYEES = [
+    Employee(id=1, name="Alice Johnson", role="Software Engineer", department="Engineering", email="alice.johnson@example.com", location="New York"),
+    Employee(id=2, name="Bob Lee", role="Product Manager", department="Product", email="bob.lee@example.com", location="San Francisco"),
+    Employee(id=3, name="Carla Gomez", role="Data Scientist", department="Data", email="carla.gomez@example.com", location="Austin"),
+    Employee(id=4, name="Daniel Kim", role="UX Designer", department="Design", email="daniel.kim@example.com", location="Seattle"),
+]
+
+
+app = FastAPI(title="Countries & Employees API", version="1.0.0")
 
 
 @app.get("/", tags=["health"])
 def read_root() -> dict[str, str]:
-    return {"message": "Countries API is running"}
+    return {"message": "Countries & Employees API is running"}
 
 
-@app.get("/countries", response_model=list[Country], tags=["countries"])
+@app.get("/countries", response_model=list[Country], tags=["countries"]) 
 def list_countries() -> list[Country]:
     return COUNTRIES
+
+
+@app.get("/employees", response_model=list[Employee], tags=["employees"]) 
+def list_employees() -> list[Employee]:
+    return EMPLOYEES
